@@ -4,7 +4,7 @@ library(reshape2)
 library(dplyr)
 library(ggvis)
 
-setwd("~/Documents/Module5/msan622/homework/hw2/")
+setwd("~/Desktop/aguimaraesduarte-viz/hw2/")
 
 # Read data
 df <- read.csv("63c67304-605f-4b8b-995c-0ee38894a737_Data.csv", stringsAsFactors = F)
@@ -40,10 +40,14 @@ ui <- fluidPage(
     selectInput("region", "Select Region", regions),
     sliderInput("year", "Select Year",
                 min = 1962, max = 2014, value = 1998, sep = "",
-                animate = animationOptions(interval = 100))
+                animate = animationOptions(interval = 100)),
+    
+    sliderInput('pop_size', "Population",
+                min = 500, max = 5000, value = 3000, step = 500, sep = "")
   ),
   mainPanel(
-    ggvisOutput("plot")
+    ggvisOutput("plot"),
+    uiOutput("plot_ui")
   )
 )
 
@@ -63,31 +67,36 @@ server <- function(input, output) {
     return(s)
   })
   
-  sub_df %>%
-    ggvis(~LifeExp, ~Fertility, fill = ~Region,
-          fillOpacity := 0.5, fillOpacity.hover := 1) %>%
-    #layer_text(text := ~Country) %>%
+  vis <- reactive({
+    popsize <- input$pop_size
     
-    set_options(width = 1000, height = 600, renderer = "svg") %>%
-    
-    add_axis("x", title = "Life expectancy", title_offset = 50) %>%
-    add_axis("y", title = "Fertility rate", title_offset = 50) %>%
-    scale_numeric("x", domain = c(10, 90), nice = FALSE) %>%
-    scale_numeric("y", domain = c(0, 10), nice = FALSE) %>%
-    scale_numeric("size", range = c(10, 3500), nice = FALSE) %>%
-    
-    layer_points(size = ~Population, key := ~Country) %>%
-    add_legend("size", orient = "left", title="Population") %>%
-    set_options(duration = 0) %>%
-    
-    add_tooltip(function(data){
-      paste0("Country: ", as.character(data$Country), "<br>",
-             "Region: ", as.character(data$Region), "<br>",
-             "Population: ", prettyNum(data$"Population", big.mark=",", scientific=FALSE), "<br>",
-             "Life Expectancy: ", as.character(round(data$LifeExp, 2)), "<br>",
-             "Fertility Rate: ", as.character(round(data$Fertility, 2)))
-    }, "hover") %>%
-    
+    sub_df %>%
+      ggvis(~LifeExp, ~Fertility, fill = ~Region,
+            fillOpacity := 0.5, fillOpacity.hover := 1) %>%
+      #layer_text(text := ~Country) %>%
+      
+      set_options(width = 1000, height = 600, renderer = "svg") %>%
+      
+      add_axis("x", title = "Life expectancy", title_offset = 50) %>%
+      add_axis("y", title = "Fertility rate", title_offset = 50) %>%
+      scale_numeric("x", domain = c(10, 90), nice = FALSE) %>%
+      scale_numeric("y", domain = c(0, 10), nice = FALSE) %>%
+      scale_numeric("size", range = c(10, popsize), nice = FALSE) %>%
+      
+      layer_points(size = ~Population, key := ~Country) %>%
+      add_legend("size", orient = "left", title="Population") %>%
+      set_options(duration = 0) %>%
+      
+      add_tooltip(function(data){
+        paste0("Country: ", as.character(data$Country), "<br>",
+               "Region: ", as.character(data$Region), "<br>",
+               "Population: ", prettyNum(data$"Population", big.mark=",", scientific=FALSE), "<br>",
+               "Life Expectancy: ", as.character(round(data$LifeExp, 2)), "<br>",
+               "Fertility Rate: ", as.character(round(data$Fertility, 2)))
+      }, "hover")
+  })
+  
+  vis %>%
     bind_shiny("plot", "plot_ui")
 }
 

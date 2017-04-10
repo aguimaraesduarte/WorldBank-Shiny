@@ -41,10 +41,10 @@ regions <- append(regions, "All", 0)
 
 ## Shiny UI
 Here, I decided to keep a clean interface for the UI:
-- a sidebar panel with a region dropdown selection and the year slider
-- a main panel with the plot and legends
+- a sidebar panel with a region dropdown selection, the year slider, and the population size slider;
+- a main panel with the plot and legends.
 
-The user choose which countries to plot by selecting the region from the dropdown menu (default is "All"), and can also choose the specific year for which to plot the points. This year slider has a "play" button that animates the graph.
+The user choose which countries to plot by selecting the region from the dropdown menu (default is "All"), and can also choose the specific year for which to plot the points. This year slider has a "play" button that animates the graph. The user can also make the circles bigger or smaller according to taste.
 
 I opted to use `ggvis` instead of `ggplot2` for this project, but it should not be too complicated to switch.
 
@@ -55,10 +55,13 @@ ui <- fluidPage(
     selectInput("region", "Select Region", regions),
     sliderInput("year", "Select Year",
                 min = 1962, max = 2014, value = 1998, sep = "",
-                animate = animationOptions(interval = 100))
+                animate = animationOptions(interval = 100)),
+    sliderInput('pop_size', "Population",
+                min = 500, max = 5000, value = 3000, step = 500, sep = "")
   ),
   mainPanel(
-    ggvisOutput("plot")
+    ggvisOutput("plot"),
+    uiOutput("plot_ui")
   )
 )
 ```
@@ -66,7 +69,7 @@ ui <- fluidPage(
 ## Shiny Server
 The server part of the app is where the cool stuff happens. First, I subset the dataframe for the year selected in the slider as well as for the region selected in the dropdown. If the region is "All", we don't need to subset per region.
 
-Aftewards, it's a matter of piping the data through `ggvis`. We color by Region, and play with the opacity so that when the mouse hovers over a country, the opacity increases. One thing I wanted to do but could not figure out is how to have a slider for the circle sizes, so that the user can decide how big or small they should be. I fixed the range to `c(10, 3500)`, meaning that the smallest population will have a circle with and area of 10 square pixels, and the biggest one will have and area of 3500 square pixels. The legend for the pouplation size had to be manually pushed to the left of the plot, or else the two legends would overlap. This is a known issue with ggvis and tooltips, so this workaround had to be made.
+Aftewards, it's a matter of piping the data through `ggvis`. We color by Region, and play with the opacity so that when the mouse hovers over a country, the opacity increases. Each circle size is proportional to the country population. The smallest population will have a circle with and area of 10 square pixels, and the biggest one will have and area defined by the slider on the sidebar. The legend for the population size had to be manually pushed to the left of the plot, or else the two legends would overlap. This is a known issue with ggvis and tooltips, so this workaround had to be made.
 
 Talking about tooltips, these show up when the mouse hovers over a circle. The circle in question will become opaque, and a tooltip will pop up showing several information about the country, such as name, region, population, life expectancy, and fertility rate.
 
@@ -87,31 +90,36 @@ server <- function(input, output) {
     return(s)
   })
   
-  sub_df %>%
-    ggvis(~LifeExp, ~Fertility, fill = ~Region,
-          fillOpacity := 0.5, fillOpacity.hover := 1) %>%
-    #layer_text(text := ~Country) %>%
+  vis <- reactive({
+    popsize <- input$pop_size
     
-    set_options(width = 1000, height = 600, renderer = "svg") %>%
-    
-    add_axis("x", title = "Life expectancy", title_offset = 50) %>%
-    add_axis("y", title = "Fertility rate", title_offset = 50) %>%
-    scale_numeric("x", domain = c(10, 90), nice = FALSE) %>%
-    scale_numeric("y", domain = c(0, 10), nice = FALSE) %>%
-    scale_numeric("size", range = c(10, 3500), nice = FALSE) %>%
-    
-    layer_points(size = ~Population, key := ~Country) %>%
-    add_legend("size", orient = "left", title="Population") %>%
-    set_options(duration = 0) %>%
-    
-    add_tooltip(function(data){
-      paste0("Country: ", as.character(data$Country), "<br>",
-             "Region: ", as.character(data$Region), "<br>",
-             "Population: ", prettyNum(data$"Population", big.mark=",", scientific=FALSE), "<br>",
-             "Life Expectancy: ", as.character(round(data$LifeExp, 2)), "<br>",
-             "Fertility Rate: ", as.character(round(data$Fertility, 2)))
-    }, "hover") %>%
-    
+    sub_df %>%
+      ggvis(~LifeExp, ~Fertility, fill = ~Region,
+            fillOpacity := 0.5, fillOpacity.hover := 1) %>%
+      #layer_text(text := ~Country) %>%
+      
+      set_options(width = 1000, height = 600, renderer = "svg") %>%
+      
+      add_axis("x", title = "Life expectancy", title_offset = 50) %>%
+      add_axis("y", title = "Fertility rate", title_offset = 50) %>%
+      scale_numeric("x", domain = c(10, 90), nice = FALSE) %>%
+      scale_numeric("y", domain = c(0, 10), nice = FALSE) %>%
+      scale_numeric("size", range = c(10, popsize), nice = FALSE) %>%
+      
+      layer_points(size = ~Population, key := ~Country) %>%
+      add_legend("size", orient = "left", title="Population") %>%
+      set_options(duration = 0) %>%
+      
+      add_tooltip(function(data){
+        paste0("Country: ", as.character(data$Country), "<br>",
+               "Region: ", as.character(data$Region), "<br>",
+               "Population: ", prettyNum(data$"Population", big.mark=",", scientific=FALSE), "<br>",
+               "Life Expectancy: ", as.character(round(data$LifeExp, 2)), "<br>",
+               "Fertility Rate: ", as.character(round(data$Fertility, 2)))
+      }, "hover")
+  })
+  
+  vis %>%
     bind_shiny("plot", "plot_ui")
 }
 ```
