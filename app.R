@@ -1,19 +1,17 @@
 library(shiny)
-library(ggplot2)
 library(reshape2)
-library(dplyr)
 library(ggvis)
 
-setwd("~/Desktop/aguimaraesduarte-viz/hw2/")
+setwd("~/Documents/Module5/msan622/WorldBank-Shiny/")
 
 # Read data
-df <- read.csv("63c67304-605f-4b8b-995c-0ee38894a737_Data.csv", stringsAsFactors = F)
+df <- read.csv("WorldBankData.csv", stringsAsFactors = F)
 # Remove trailing data (garbage from WDI)
 df <- df[1:(nrow(df)-5),]
 # Change names
 names(df) <- c("Indicator", "IndCode", "Country", "Country.Code", as.character(1960:2015))
 # Get metadata
-meta <- read.csv("Metadata_Country_API_SP.DYN.TFRT.IN_DS2_en_csv_v2.csv")
+meta <- read.csv("Metadata.csv")
 meta <- meta[,c("Country.Code", "Region")]
 meta <- meta[meta$Region!="",]
 # Merge tables
@@ -41,9 +39,8 @@ ui <- fluidPage(
     sliderInput("year", "Select Year",
                 min = 1962, max = 2014, value = 1998, sep = "",
                 animate = animationOptions(interval = 100)),
-    
     sliderInput('pop_size', "Population",
-                min = 500, max = 5000, value = 3000, step = 500, sep = "")
+                min = 500, max = 5000, value = 3000, step = 500, sep = "", ticks = F)
   ),
   mainPanel(
     ggvisOutput("plot"),
