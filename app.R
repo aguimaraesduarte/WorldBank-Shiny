@@ -1,17 +1,18 @@
 library(shiny)
+library(ggplot2)
 library(reshape2)
 library(ggvis)
 
-setwd("~/Documents/Module5/msan622/WorldBank-Shiny/")
+setwd("~/Desktop/")
 
 # Read data
-df <- read.csv("WorldBankData.csv", stringsAsFactors = F)
+df <- read.csv("63c67304-605f-4b8b-995c-0ee38894a737_Data.csv", stringsAsFactors = F)
 # Remove trailing data (garbage from WDI)
 df <- df[1:(nrow(df)-5),]
 # Change names
 names(df) <- c("Indicator", "IndCode", "Country", "Country.Code", as.character(1960:2015))
 # Get metadata
-meta <- read.csv("Metadata.csv")
+meta <- read.csv("Metadata_Country_API_SP.DYN.TFRT.IN_DS2_en_csv_v2.csv")
 meta <- meta[,c("Country.Code", "Region")]
 meta <- meta[meta$Region!="",]
 # Merge tables
@@ -69,7 +70,8 @@ server <- function(input, output) {
     
     sub_df %>%
       ggvis(~LifeExp, ~Fertility, fill = ~Region,
-            fillOpacity := 0.5, fillOpacity.hover := 1) %>%
+            fillOpacity := 0.5, fillOpacity.hover := 1,
+            stroke := NA, stroke.hover = ~Region, strokeWidth := 4, strokeOpacity := 0.5) %>%
       #layer_text(text := ~Country) %>%
       
       set_options(width = 1000, height = 600, renderer = "svg") %>%
