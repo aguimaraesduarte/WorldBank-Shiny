@@ -11,7 +11,8 @@ Before heading into the app part of the process, let's first talk about the data
 ## Cleaning the data
 The downloaded CSV is a "short and fat" table, where each country represents one row, and there is a column for each year. All three indicator variables are also concatenated into one single column, which is not ideal for this analysis. Therefore, we use `reshape2` and `dplyr` to _melt_ and _cast_ the data frame and iteratively construct one that is "long and thin". My final columns are **Country**, **Region**, **Year**, **Fertility**, **LifeExp**, and **Population**. The geographical region for each country was downloaded separately from the metadata, and needs to be merged into our data frame by country.
 
-```# Read data
+```
+# Read data
 df <- read.csv("WorldBankData.csv", stringsAsFactors = F)
 
 # Remove trailing data (garbage from WDI)
