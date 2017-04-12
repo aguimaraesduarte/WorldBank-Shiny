@@ -11,31 +11,39 @@ Before heading into the app part of the process, let's first talk about the data
 ## Cleaning the data
 The downloaded CSV is a "short and fat" table, where each country represents one row, and there is a column for each year. All three indicator variables are also concatenated into one single column, which is not ideal for this analysis. Therefore, we use `reshape2` and `dplyr` to _melt_ and _cast_ the data frame and iteratively construct one that is "long and thin". My final columns are **Country**, **Region**, **Year**, **Fertility**, **LifeExp**, and **Population**. The geographical region for each country was downloaded separately from the metadata, and needs to be merged into our data frame by country.
 
-```
-# Read data
-df <- read.csv(<path_to_csv_file>, stringsAsFactors = F)
+```# Read data
+df <- read.csv("WorldBankData.csv", stringsAsFactors = F)
+
 # Remove trailing data (garbage from WDI)
 df <- df[1:(nrow(df)-5),]
-# Change column names
+
+# Change names
 names(df) <- c("Indicator", "IndCode", "Country", "Country.Code", as.character(1960:2015))
+
 # Get metadata
-meta <- read.csv(<path_to_metadata_csv_file>)
+meta <- read.csv("Metadata.csv")
 meta <- meta[,c("Country.Code", "Region")]
 meta <- meta[meta$Region!="",]
+
 # Merge tables
 df <- merge(df, meta, "Country.Code")
+
 # Keep only columns of interest
 df <- df[,c(2, 4, 5:ncol(df))]
 df$Indicator <- factor(df$Indicator)
 df$Country <- factor(df$Country)
 df$Region <- factor(df$Region)
+
 # Melt years
 df <- melt(df, c("Indicator", "Country", "Region"), 5:(ncol(df)-1), variable.name = "Year", value.name = "Value")
 df$Value <- as.numeric(df$Value)
+
 # Cast indicators
 df <- dcast(df, Country+Region+Year~Indicator, value.var = "Value")
-# Change column names
+
+# Change names
 names(df) <- c("Country", "Region", "Year", "Fertility", "LifeExp", "Population")
+
 # Define regions vector
 regions <- sort(as.vector(unique(df$Region)))
 regions <- append(regions, "All", 0)
@@ -59,7 +67,7 @@ ui <- fluidPage(
                 min = 1962, max = 2014, value = 1998, sep = "",
                 animate = animationOptions(interval = 100)),
     sliderInput('pop_size', "Population",
-                min = 500, max = 5000, value = 3000, step = 500, sep = "")
+                min = 500, max = 5000, value = 3000, step = 500, sep = "", ticks = F)
   ),
   mainPanel(
     ggvisOutput("plot"),
@@ -71,7 +79,7 @@ ui <- fluidPage(
 ## Shiny Server
 The server part of the app is where the cool stuff happens. First, I subset the dataframe for the year selected in the slider as well as for the region selected in the dropdown. If the region is "All", we don't need to subset per region.
 
-Aftewards, it's a matter of piping the data through `ggvis`. We color by Region, and play with the opacity so that when the mouse hovers over a country, the opacity increases. Each circle size is proportional to the country population. The smallest population will have a circle with and area of 10 square pixels, and the biggest one will have and area defined by the slider on the sidebar. The legend for the population size had to be manually pushed to the left of the plot, or else the two legends would overlap. This is a known issue with ggvis and tooltips, so this workaround had to be made.
+Aftewards, it's a matter of piping the data through `ggvis`. We color by Region, and play with the opacity so that when the mouse hovers over a country, the opacity increases. Each circle size is proportional to the country population. The smallest population will have a circle with and area of 10 square pixels, and the biggest one will have and area defined by the slider on the sidebar. I opted to hide the population size legend, as it wasn't very informative and caused more issues than having it present. Indeed, since hovering over a country shows its population, it would be slightly redundant to have both information on the screen.
 
 Talking about tooltips, these show up when the mouse hovers over a circle. The circle in question will become opaque, and a tooltip will pop up showing several information about the country, such as name, region, population, life expectancy, and fertility rate.
 
@@ -79,25 +87,26 @@ Talking about tooltips, these show up when the mouse hovers over a circle. The c
 server <- function(input, output) {
   
   sub_df <- reactive({
-    s <- subset.data.frame(df, Year == input$year, drop=T)
-    s[is.na(s$LifeExp), "Fertility"] <- NA
-    s[is.na(s$Fertility), "LifeExp"] <- NA
+    s <- subset(df, Year == input$year, drop=T)
+    s <- subset(s, !is.na(s$LifeExp))
+    s <- subset(s, !is.na(s$Fertility))
     
     region <- input$region
     if(region != "All"){
-      s <- subset.data.frame(s, Region == region, drop = T)
+      s <- subset(s, Region == region, drop = T)
     }
     
-    s <- s[!is.na(s$LifeExp),]
     return(s)
   })
   
   vis <- reactive({
+    
     popsize <- input$pop_size
     
     sub_df %>%
       ggvis(~LifeExp, ~Fertility, fill = ~Region,
-            fillOpacity := 0.5, fillOpacity.hover := 1) %>%
+            fillOpacity := 0.5, fillOpacity.hover := 1,
+            stroke := NA, stroke.hover = ~Region, strokeWidth := 4, strokeOpacity := 0.5) %>%
       #layer_text(text := ~Country) %>%
       
       set_options(width = 1000, height = 600, renderer = "svg") %>%
@@ -109,7 +118,8 @@ server <- function(input, output) {
       scale_numeric("size", range = c(10, popsize), nice = FALSE) %>%
       
       layer_points(size = ~Population, key := ~Country) %>%
-      add_legend("size", orient = "left", title="Population") %>%
+      #add_legend("size", orient = "left", title="Population") %>%
+      hide_legend("size") %>%
       set_options(duration = 0) %>%
       
       add_tooltip(function(data){
