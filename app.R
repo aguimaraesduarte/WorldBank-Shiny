@@ -30,6 +30,8 @@ names(df) <- c("Country", "Region", "Year", "Fertility", "LifeExp", "Population"
 # Define regions vector
 regions <- sort(as.vector(unique(df$Region)))
 regions <- append(regions, "All", 0)
+# Define countries vector
+countries <- sort(as.vector(unique(df$Country)))
 
 ui <- fluidPage(
   headerPanel("Gapminder Interactive Plot"),
@@ -50,20 +52,20 @@ ui <- fluidPage(
 server <- function(input, output) {
   
   sub_df <- reactive({
-    s <- subset.data.frame(df, Year == input$year, drop=T)
-    s[is.na(s$LifeExp), "Fertility"] <- NA
-    s[is.na(s$Fertility), "LifeExp"] <- NA
+    s <- subset(df, Year == input$year, drop=T)
+    s <- subset(s, !is.na(s$LifeExp))
+    s <- subset(s, !is.na(s$Fertility))
     
     region <- input$region
     if(region != "All"){
-      s <- subset.data.frame(s, Region == region, drop = T)
+      s <- subset(s, Region == region, drop = T)
     }
     
-    s <- s[!is.na(s$LifeExp),]
     return(s)
   })
   
   vis <- reactive({
+    
     popsize <- input$pop_size
     
     sub_df %>%
@@ -81,7 +83,8 @@ server <- function(input, output) {
       scale_numeric("size", range = c(10, popsize), nice = FALSE) %>%
       
       layer_points(size = ~Population, key := ~Country) %>%
-      add_legend("size", orient = "left", title="Population") %>%
+      #add_legend("size", orient = "left", title="Population") %>%
+      hide_legend("size") %>%
       set_options(duration = 0) %>%
       
       add_tooltip(function(data){
