@@ -21,7 +21,7 @@ df$Indicator <- factor(df$Indicator)
 df$Country <- factor(df$Country)
 df$Region <- factor(df$Region)
 # Melt years
-df <- melt(df, c("Indicator", "Country", "Region"), 5:(ncol(df)-1), variable.name = "Year", value.name = "Value")
+df <- melt(df, c("Indicator", "Country", "Region"), 3:(ncol(df)-1), variable.name = "Year", value.name = "Value")
 df$Value <- as.numeric(df$Value)
 # Cast indicators
 df <- dcast(df, Country+Region+Year~Indicator, value.var = "Value")
@@ -38,7 +38,7 @@ ui <- fluidPage(
   sidebarPanel(width = 3,
     selectInput("region", "Select Region", regions),
     sliderInput("year", "Select Year",
-                min = 1962, max = 2014, value = 1998, sep = "",
+                min = 1960, max = 2014, value = 1970, sep = "",
                 animate = animationOptions(interval = 100)),
     sliderInput('pop_size', "Population",
                 min = 500, max = 5000, value = 3000, step = 500, sep = "", ticks = F)
