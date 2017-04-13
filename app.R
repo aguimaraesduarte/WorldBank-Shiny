@@ -88,11 +88,11 @@ server <- function(input, output) {
       set_options(duration = 0) %>%
       
       add_tooltip(function(data){
-        paste0("Country: ", as.character(data$Country), "<br>",
-               "Region: ", as.character(data$Region), "<br>",
-               "Population: ", prettyNum(data$"Population", big.mark=",", scientific=FALSE), "<br>",
-               "Life Expectancy: ", as.character(round(data$LifeExp, 2)), "<br>",
-               "Fertility Rate: ", as.character(round(data$Fertility, 2)))
+        paste0("Country: <b>", as.character(data$Country), "</b><br>",
+               "Region: <b>", as.character(data$Region), "</b><br>",
+               "Population: <b>", prettyNum(data$"Population", big.mark=",", scientific=FALSE), "</b><br>",
+               "Life Expectancy: <b>", as.character(round(data$LifeExp, 2)), "</b><br>",
+               "Fertility Rate: <b>", as.character(round(data$Fertility, 2)), "</b>")
       }, "hover")
   })
   
