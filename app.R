@@ -1,7 +1,15 @@
-library(shiny)
-library(ggplot2)
-library(reshape2)
-library(ggvis)
+if(!"shiny" %in% rownames(installed.packages())){
+  install.packages("shiny", dependencies = T)
+}
+if(!"ggplot2" %in% rownames(installed.packages())){
+  install.packages("ggplot2", dependencies = T)
+}
+if(!"reshape2" %in% rownames(installed.packages())){
+  install.packages("reshape2", dependencies = T)
+}
+if(!"ggvis" %in% rownames(installed.packages())){
+  install.packages("ggvis", dependencies = T)
+}
 
 # Read data
 df <- read.csv("WorldBankData.csv", stringsAsFactors = F)
@@ -101,4 +109,5 @@ server <- function(input, output) {
 }
 
 shinyApp(ui = ui, server = server)
+
 
