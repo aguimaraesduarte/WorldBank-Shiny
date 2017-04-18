@@ -36,7 +36,7 @@ df$Country <- factor(df$Country)
 df$Region <- factor(df$Region)
 
 # Melt years
-df <- melt(df, c("Indicator", "Country", "Region"), 5:(ncol(df)-1), variable.name = "Year", value.name = "Value")
+df <- melt(df, c("Indicator", "Country", "Region"), 3:(ncol(df)-1), variable.name = "Year", value.name = "Value")
 df$Value <- as.numeric(df$Value)
 
 # Cast indicators
@@ -48,6 +48,9 @@ names(df) <- c("Country", "Region", "Year", "Fertility", "LifeExp", "Population"
 # Define regions vector
 regions <- sort(as.vector(unique(df$Region)))
 regions <- append(regions, "All", 0)
+
+# Define countries vector
+countries <- sort(as.vector(unique(df$Country)))
 ```
 
 ## Shiny UI
@@ -55,7 +58,7 @@ Here, I decided to keep a clean interface for the UI:
 - a sidebar panel with a region dropdown selection, the year slider, and the population size slider;
 - a main panel with the plot and legends.
 
-The user choose which countries to plot by selecting the region from the dropdown menu (default is "All"), and can also choose the specific year for which to plot the points. This year slider has a "play" button that animates the graph. The user can also make the circles bigger or smaller according to taste.
+The user choose which countries to plot by selecting the region from the dropdown menu (default is "All"), and can also select some countries to keep track of (text will appear with their name). The user may also choose the specific year for which to plot the points. This year slider has a "play" button that animates the graph. The user can also make the circles bigger or smaller according to taste.
 
 I opted to use `ggvis` instead of `ggplot2` for this project, but it should not be too complicated to switch.
 
@@ -63,12 +66,13 @@ I opted to use `ggvis` instead of `ggplot2` for this project, but it should not 
 ui <- fluidPage(
   headerPanel("Gapminder Interactive Plot"),
   sidebarPanel(width = 3,
-    selectInput("region", "Select Region", regions),
-    sliderInput("year", "Select Year",
-                min = 1962, max = 2014, value = 1998, sep = "",
-                animate = animationOptions(interval = 100)),
-    sliderInput('pop_size', "Population",
-                min = 500, max = 5000, value = 3000, step = 500, sep = "", ticks = F)
+               selectInput("region", "Select Region", regions),
+               selectizeInput("countries", "Select Countries", countries, multiple = T),
+               sliderInput("year", "Select Year",
+                           min = 1960, max = 2014, value = 1970, sep = "",
+                           animate = animationOptions(interval = 100)),
+               sliderInput('pop_size', "Population",
+                           min = 500, max = 5000, value = 3000, step = 500, sep = "", ticks = F)
   ),
   mainPanel(
     ggvisOutput("plot"),
@@ -80,35 +84,32 @@ ui <- fluidPage(
 ## Shiny Server
 The server part of the app is where the cool stuff happens. First, I subset the dataframe for the year selected in the slider as well as for the region selected in the dropdown. If the region is "All", we don't need to subset per region.
 
-Aftewards, it's a matter of piping the data through `ggvis`. We color by Region, and play with the opacity so that when the mouse hovers over a country, the opacity increases. Each circle size is proportional to the country population. The smallest population will have a circle with and area of 10 square pixels, and the biggest one will have and area defined by the slider on the sidebar. I opted to hide the population size legend, as it wasn't very informative and caused more issues than having it present. Indeed, since hovering over a country shows its population, it would be slightly redundant to have both information on the screen.
+Aftewards, it's a matter of piping the data through `ggvis`. We color by Region, and play with the opacity so that when the mouse hovers over a country, the opacity increases. Each circle size is proportional to the country population. The smallest population will have a circle with and area of 10 square pixels, and the biggest one will have and area defined by the slider on the sidebar. I opted to hide the population size legend, as it wasn't very informative and caused more issues than having it present. Indeed, since hovering over a country shows its population, it would be slightly redundant to have both information on the screen. Finally, the selected countries have their names as a label that follows the circle for easy tracking. However, this makes the animation a little bit more sluggish, as more computation is needed each step.
 
 Talking about tooltips, these show up when the mouse hovers over a circle. The circle in question will become opaque, and a tooltip will pop up showing several information about the country, such as name, region, population, life expectancy, and fertility rate.
 
 ```
 server <- function(input, output) {
   
-  sub_df <- reactive({
-    s <- subset(df, Year == input$year, drop=T)
-    s <- subset(s, !is.na(s$LifeExp))
-    s <- subset(s, !is.na(s$Fertility))
+  vis <- reactive({
+    sub_df <- subset(df, Year == input$year, drop=T)
+    sub_df <- subset(sub_df, !is.na(sub_df$LifeExp))
+    sub_df <- subset(sub_df, !is.na(sub_df$Fertility))
     
     region <- input$region
     if(region != "All"){
-      s <- subset(s, Region == region, drop = T)
+      sub_df <- subset(sub_df, Region == region, drop = T)
     }
     
-    return(s)
-  })
-  
-  vis <- reactive({
-    
     popsize <- input$pop_size
+    
+    selected_countries <- input$countries
     
     sub_df %>%
       ggvis(~LifeExp, ~Fertility, fill = ~Region,
             fillOpacity := 0.5, fillOpacity.hover := 1,
             stroke := NA, stroke.hover = ~Region, strokeWidth := 4, strokeOpacity := 0.5) %>%
-      #layer_text(text := ~Country) %>%
+      layer_text(text := ~Country, data = subset(sub_df, Country %in% selected_countries)) %>%
       
       set_options(width = 1000, height = 600, renderer = "svg") %>%
       
@@ -119,7 +120,6 @@ server <- function(input, output) {
       scale_numeric("size", range = c(10, popsize), nice = FALSE) %>%
       
       layer_points(size = ~Population, key := ~Country) %>%
-      #add_legend("size", orient = "left", title="Population") %>%
       hide_legend("size") %>%
       set_options(duration = 0) %>%
       
@@ -138,4 +138,4 @@ server <- function(input, output) {
 ```
 
 # Final thoughts
-The app is then run by calling `shinyApp(ui = ui, server = server)`, and produces a fairly similar output to what we were trying to replicate. Future work will include being able to select the x and y axes, as well as maybe labeling some countries (I could only label all of them, which made the plot look terrible).
+The app is then run by calling `shinyApp(ui = ui, server = server)`, and produces a fairly similar output to what we were trying to replicate. Future work will include being able to select the x and y axes, as well as maybe trying to optimize the subsetting so that the animation can become smooth even with the option to select and highlight countries.
