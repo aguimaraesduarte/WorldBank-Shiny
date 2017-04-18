@@ -84,7 +84,8 @@ server <- function(input, output) {
       ggvis(~LifeExp, ~Fertility, fill = ~Region,
             fillOpacity := 0.5, fillOpacity.hover := 1,
             stroke := NA, stroke.hover = ~Region, strokeWidth := 4, strokeOpacity := 0.5) %>%
-      layer_text(text := ~Country, data = subset(sub_df, Country %in% selected_countries)) %>%
+      layer_text(text := ~Country, data = subset(sub_df, Country %in% selected_countries,
+                 fontSize := 15)) %>%
       
       set_options(width = 1000, height = 600, renderer = "svg") %>%
       
