@@ -41,15 +41,16 @@ df <- dcast(df, Country+Region+Year~Indicator, value.var = "Value")
 names(df) <- c("Country", "Region", "Year", "Fertility", "LifeExp", "Population")
 # Define regions vector
 regions <- sort(as.vector(unique(df$Region)))
-regions <- append(regions, "All", 0)
 # Define countries vector
 countries <- sort(as.vector(unique(df$Country)))
 
 ui <- fluidPage(
   headerPanel("Gapminder Interactive Plot"),
   sidebarPanel(width = 3,
-               selectInput("region", "Select Region", regions),
-               selectizeInput("countries", "Select Countries", countries, multiple = T),
+               selectizeInput("regions", "Select Region", regions, multiple = T,
+                              options = list(placeholder = 'Select regions')),
+               selectizeInput("countries", "Select Countries", countries, multiple = T,
+                              options = list(placeholder = 'Select countries')),
                sliderInput("year", "Select Year",
                            min = 1960, max = 2014, value = 1970, sep = "",
                            animate = animationOptions(interval = 100)),
@@ -65,13 +66,14 @@ ui <- fluidPage(
 server <- function(input, output) {
   
   vis <- reactive({
+    
     sub_df <- subset(df, Year == input$year, drop=T)
     sub_df <- subset(sub_df, !is.na(sub_df$LifeExp))
     sub_df <- subset(sub_df, !is.na(sub_df$Fertility))
     
-    region <- input$region
-    if(region != "All"){
-      sub_df <- subset(sub_df, Region == region, drop = T)
+    regions <- input$regions
+    if(!is.null(regions)){
+      sub_df <- subset(sub_df, Region %in% regions, drop = T)
     }
     
     popsize <- input$pop_size

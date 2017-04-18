@@ -5,10 +5,7 @@ You can try this out online on [shinyapps.io](https://aguimaraesduarte.shinyapps
 
 [The World Bank](http://databank.worldbank.org/data/reports.aspx?source=2&series=SP.POP.1564.TO.ZS&country=) provides a lot of data for all countries between 1960 and 2015, such as Life Expectancy, Fertility Rate, Population, and many others. In this project, I chose those three variables in order to build an R Shiny app that plots the Fertility Rate vs Life Expectancy throughout the years. Each country is a single point that moves through the plot with time, and the size of the point is proportional to the total population for that country. My goal was to reproduce [this interactive graph](https://www.google.com/publicdata/explore?ds=d5bncppjof8f9_&ctype=b&strail=false&nselm=s&met_x=sp_dyn_le00_in&scale_x=lin&ind_x=false&met_y=sp_dyn_tfrt_in&scale_y=lin&ind_y=false&met_s=sp_pop_totl&scale_s=lin&ind_s=false&dimp_c=country:region&ifdim=country&iconSize=0.5&uniSize=0.035) from Google. The result is fairly close.
 
-# Building the app
-Before heading into the app part of the process, let's first talk about the data and the tools I used.
-
-## Cleaning the data
+# Prepping the data
 The downloaded CSV is a "short and fat" table, where each country represents one row, and there is a column for each year. All three indicator variables are also concatenated into one single column, which is not ideal for this analysis. Therefore, we use `reshape2` and `dplyr` to _melt_ and _cast_ the data frame and iteratively construct one that is "long and thin". My final columns are **Country**, **Region**, **Year**, **Fertility**, **LifeExp**, and **Population**. The geographical region for each country was downloaded separately from the metadata, and needs to be merged into our data frame by country.
 
 ```
@@ -53,12 +50,12 @@ regions <- append(regions, "All", 0)
 countries <- sort(as.vector(unique(df$Country)))
 ```
 
-## Shiny UI
+# Shiny UI
 Here, I decided to keep a clean interface for the UI:
-- a sidebar panel with a region dropdown selection, the year slider, and the population size slider;
+- a sidebar panel with a region selection, country selection, the year slider, and the population size slider;
 - a main panel with the plot and legends.
 
-The user choose which countries to plot by selecting the region from the dropdown menu (default is "All"), and can also select some countries to keep track of (text will appear with their name). The user may also choose the specific year for which to plot the points. This year slider has a "play" button that animates the graph. The user can also make the circles bigger or smaller according to taste.
+The user choose which countries to plot by selecting regions from the selectize menu (no selection keeps all regions), and can also select some countries to keep track of (text will appear with their name). The user may also choose the specific year for which to plot the points. This year slider has a "play" button that animates the graph. The user can also make the circles bigger or smaller according to taste.
 
 I opted to use `ggvis` instead of `ggplot2` for this project, but it should not be too complicated to switch.
 
@@ -66,8 +63,10 @@ I opted to use `ggvis` instead of `ggplot2` for this project, but it should not 
 ui <- fluidPage(
   headerPanel("Gapminder Interactive Plot"),
   sidebarPanel(width = 3,
-               selectInput("region", "Select Region", regions),
-               selectizeInput("countries", "Select Countries", countries, multiple = T),
+               selectizeInput("regions", "Select Region", regions, multiple = T,
+                              options = list(placeholder = 'Select regions')),
+               selectizeInput("countries", "Select Countries", countries, multiple = T,
+                              options = list(placeholder = 'Select countries')),
                sliderInput("year", "Select Year",
                            min = 1960, max = 2014, value = 1970, sep = "",
                            animate = animationOptions(interval = 100)),
@@ -81,8 +80,8 @@ ui <- fluidPage(
 )
 ```
 
-## Shiny Server
-The server part of the app is where the cool stuff happens. First, I subset the dataframe for the year selected in the slider as well as for the region selected in the dropdown. If the region is "All", we don't need to subset per region.
+# Shiny Server
+The server part of the app is where the cool stuff happens. First, I subset the dataframe for the year selected in the slider as well as for the region selected in the selectize. If no region is selected, we don't need to subset per region.
 
 Aftewards, it's a matter of piping the data through `ggvis`. We color by Region, and play with the opacity so that when the mouse hovers over a country, the opacity increases. Each circle size is proportional to the country population. The smallest population will have a circle with and area of 10 square pixels, and the biggest one will have and area defined by the slider on the sidebar. I opted to hide the population size legend, as it wasn't very informative and caused more issues than having it present. Indeed, since hovering over a country shows its population, it would be slightly redundant to have both information on the screen. Finally, the selected countries have their names as a label that follows the circle for easy tracking. However, this makes the animation a little bit more sluggish, as more computation is needed each step.
 
@@ -92,13 +91,14 @@ Talking about tooltips, these show up when the mouse hovers over a circle. The c
 server <- function(input, output) {
   
   vis <- reactive({
+    
     sub_df <- subset(df, Year == input$year, drop=T)
     sub_df <- subset(sub_df, !is.na(sub_df$LifeExp))
     sub_df <- subset(sub_df, !is.na(sub_df$Fertility))
     
-    region <- input$region
-    if(region != "All"){
-      sub_df <- subset(sub_df, Region == region, drop = T)
+    regions <- input$regions
+    if(!is.null(regions)){
+      sub_df <- subset(sub_df, Region %in% regions, drop = T)
     }
     
     popsize <- input$pop_size
