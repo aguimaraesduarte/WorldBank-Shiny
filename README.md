@@ -1,7 +1,7 @@
 # WorldBank-Shiny
 ![gif](static/worldbank-shiny.gif)
 
-[Try it out!](https://aguimaraesduarte.shinyapps.io/worldbank-visualizer/)
+You can try this out online on [shinyapps.io](https://aguimaraesduarte.shinyapps.io/worldbank-visualizer/), or by running `shiny::runGitHub("WorldBank-Shiny", "aguimaraesduarte")` in [RStudio](https://www.rstudio.com/). Have fun!
 
 [The World Bank](http://databank.worldbank.org/data/reports.aspx?source=2&series=SP.POP.1564.TO.ZS&country=) provides a lot of data for all countries between 1960 and 2015, such as Life Expectancy, Fertility Rate, Population, and many others. In this project, I chose those three variables in order to build an R Shiny app that plots the Fertility Rate vs Life Expectancy throughout the years. Each country is a single point that moves through the plot with time, and the size of the point is proportional to the total population for that country. My goal was to reproduce [this interactive graph](https://www.google.com/publicdata/explore?ds=d5bncppjof8f9_&ctype=b&strail=false&nselm=s&met_x=sp_dyn_le00_in&scale_x=lin&ind_x=false&met_y=sp_dyn_tfrt_in&scale_y=lin&ind_y=false&met_s=sp_pop_totl&scale_s=lin&ind_s=false&dimp_c=country:region&ifdim=country&iconSize=0.5&uniSize=0.035) from Google. The result is fairly close.
 
