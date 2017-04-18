@@ -1,3 +1,20 @@
+if(!"shiny" %in% rownames(installed.packages())){
+  install.packages("shiny", dependencies = T)
+}
+library("shiny")
+if(!"ggplot2" %in% rownames(installed.packages())){
+  install.packages("ggplot2", dependencies = T)
+}
+library("ggplot2")
+if(!"reshape2" %in% rownames(installed.packages())){
+  install.packages("reshape2", dependencies = T)
+}
+library("reshape2")
+if(!"ggvis" %in% rownames(installed.packages())){
+  install.packages("ggvis", dependencies = T)
+}
+library("ggvis")
+
 # Read data
 df <- read.csv("WorldBankData.csv", stringsAsFactors = F)
 # Remove trailing data (garbage from WDI)
