@@ -2,10 +2,6 @@ if(!"shiny" %in% rownames(installed.packages())){
   install.packages("shiny", dependencies = T)
 }
 library("shiny")
-if(!"ggplot2" %in% rownames(installed.packages())){
-  install.packages("ggplot2", dependencies = T)
-}
-library("ggplot2")
 if(!"reshape2" %in% rownames(installed.packages())){
   install.packages("reshape2", dependencies = T)
 }
